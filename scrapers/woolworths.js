@@ -39,6 +39,8 @@ class WoolworthsScraper extends BaseScraper {
             for (let i = 2; i <= numPages; i++) {
                 const page = await this.getProductPage(category, i, PAGE_SIZE);
                 results.push(...this.parseBundles(category, page.data["Bundles"]));
+
+                await new Promise(_ => setTimeout(_, 1000));
             }
         }
         console.log("downloaded all");
