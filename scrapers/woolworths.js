@@ -16,6 +16,7 @@ class WoolworthsScraper extends BaseScraper {
         this.category = {};
         for (const categoryObject of rawBootstrap.data["ListTopLevelPiesCategories"]["Categories"]) {
             this.category[categoryObject["NodeId"]] = {
+                key: categoryObject["NodeId"],
                 description: categoryObject["Description"],
                 urlFriendlyName: categoryObject["UrlFriendlyName"],
             };
@@ -24,24 +25,41 @@ class WoolworthsScraper extends BaseScraper {
     }
 
     async fetch() {
-        const PRODUCTS_PATH = "/apis/ui/browse/category";
-        const PRODUCT_PATH_BASE = "/shop/browse";
+        const PAGE_SIZE = 36;
         // TODO: more than one category
         const categoryKey = "1-E5BEE36E";
         const category = this.category[categoryKey];
+        const firstPage = await this.getProductPage(category, 1, PAGE_SIZE);
+        const results = [];
+        results.push(...this.parseBundles(category, firstPage.data["Bundles"]));
+
+        const numPages = Math.ceil(firstPage.data["TotalRecordCount"] / PAGE_SIZE);
+        console.log(`will get ${numPages} pages`)
+        for (let i = 2; i <= numPages; i++) {
+            const page = await this.getProductPage(category, i, PAGE_SIZE);
+            results.push(...this.parseBundles(category, page.data["Bundles"]));
+        }
+        console.log("downloaded all");
+
+        return results;
+    }
+
+    async getProductPage(category, pageNum, pageSize) {
+        const PRODUCT_PATH_BASE = "/shop/browse";
+        const PRODUCTS_PATH = "/apis/ui/browse/category";
         const productPath = PRODUCT_PATH_BASE + "/" + category["urlFriendlyName"];
-        console.log("getting products for category key " + categoryKey);
-        const rawProducts = await axios.post(BASE_URL + PRODUCTS_PATH,
+        console.log(`getting products for category key ${category["key"]} page ${pageNum}`);
+        return await axios.post(BASE_URL + PRODUCTS_PATH,
             {
-                categoryId: categoryKey,
+                categoryId: category["key"],
                 filters: [],
                 formatObject: JSON.stringify({"name": category["description"]}),
                 isBundle: false,
                 isMobile: false,
                 isSpecial: false,
                 location: productPath,
-                pageNumber: 1,
-                pageSize: 36,
+                pageNumber: pageNum,
+                pageSize: pageSize,
                 sortType: "TraderRelevance",
                 token: "",
                 url: productPath,
@@ -53,23 +71,22 @@ class WoolworthsScraper extends BaseScraper {
                 }
             }
         );
-        console.log("downloaded");
-        return this.parseBundles(category, rawProducts.data["Bundles"]);
     }
 
     parseBundles(category, bundles) {
-        const REGEX_EACH_UNIT = /each/i;
         const REGEX_PER_UNIT = /per (.*)/i;
-        const REGEX_QTY_UNIT = /(\d+) ?(.*)/;
+        const REGEX_QTY_UNIT = /(\d+\.\d*|\d*\.\d+|\d+) ?(.*)/;
         let results = [];
         for (const bundle of bundles) {
             for (const product of bundle["Products"]) {
                 if (product["Price"] === null) continue; // product unavailable
+                console.log(product);
+                console.log(product["PackageSize"]);
 
                 let qty, unit;
                 const qtyUnitPackage = product["PackageSize"].match(REGEX_QTY_UNIT);
                 if (qtyUnitPackage !== null) {
-                    qty = parseInt(qtyUnitPackage[1]);
+                    qty = parseFloat(qtyUnitPackage[1]);
                     unit = qtyUnitPackage[2];
                 } else {
                     const perUnitPackage = product["PackageSize"].match(REGEX_PER_UNIT);
@@ -77,13 +94,8 @@ class WoolworthsScraper extends BaseScraper {
                         qty = 0; // TODO fix hack for "per unit" quantity?
                         unit = perUnitPackage[1];
                     } else {
-                        const eachPackage = product["PackageSize"].match(REGEX_EACH_UNIT);
-                        if (eachPackage !== null) {
-                            qty = 1;
-                            unit = "each";
-                        } else {
-                            throw new Error("Unknown package size " + product["PackageSize"]);
-                        }
+                        qty = 1;
+                        unit = "each";
                     }
                 }
 
@@ -108,28 +120,29 @@ class WoolworthsScraper extends BaseScraper {
 
     normaliseUnit(qty, unit) {
         unit = unit.toLowerCase();
-        const REGEX_TO_REMOVE = /\s|punnet/g;
-        unit = unit.replaceAll(REGEX_TO_REMOVE, "");
         switch (unit) {
             case "g":
             case "ml":
             case "each":
                 return {
-                    qty: qty,
+                    qty: Math.round(qty),
                     unit: unit
                 }
             case "kg":
                 return {
-                    qty: 1000*qty,
+                    qty: Math.round(1000*qty),
                     unit: "g"
                 }
             case "l":
                 return {
-                    qty: 1000*qty,
+                    qty: Math.round(1000*qty),
                     unit: "ml"
                 }
             default:
-                throw new Error("Unknown unit: " + unit);
+                return {
+                    qty: Math.round(qty),
+                    unit: "each"
+                }
         }
     }
 
