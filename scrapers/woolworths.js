@@ -22,26 +22,43 @@ class WoolworthsScraper extends BaseScraper {
             };
         }
         console.log(this.categories);
+        this.categoriesKeys = Object.keys(this.categories);
+        this.currentCategoryIndex = 0;
     }
 
     async fetch() {
+        if (this.currentCategoryIndex >= this.categoriesKeys.length) {
+            return []; // got all categories
+        }
+
+        let results = [];
+        // keep going to next category if current one has zero products
+        // unless of course we exhausted all categories
+        while (this.currentCategoryIndex < this.categoriesKeys.length && results.length === 0) {
+            const key = this.categoriesKeys[this.currentCategoryIndex];
+            results.push(...(await this.fetchCategory(this.categories[key])));
+            this.currentCategoryIndex++;
+        }
+
+        return results;
+    }
+
+    async fetchCategory(category) {
         const PAGE_SIZE = 36;
-        for (const category of Object.values(this.categories)) {
-            console.log(`downloading category ${category}`);
-            const firstPage = await this.getProductPage(category, 1, PAGE_SIZE);
-            const results = [];
-            if ("Bundles" in firstPage.data && firstPage.data["Bundles"] !== null) {
-                results.push(...this.parseBundles(category, firstPage.data["Bundles"]));
-            }
+        console.log(`downloading category ${category}`);
+        const firstPage = await this.getProductPage(category, 1, PAGE_SIZE);
+        const results = [];
+        if ("Bundles" in firstPage.data && firstPage.data["Bundles"] !== null) {
+            results.push(...this.parseBundles(category, firstPage.data["Bundles"]));
+        }
 
-            const numPages = Math.ceil(firstPage.data["TotalRecordCount"] / PAGE_SIZE);
-            console.log(`will get ${numPages} pages`)
-            for (let i = 2; i <= numPages; i++) {
-                const page = await this.getProductPage(category, i, PAGE_SIZE);
-                results.push(...this.parseBundles(category, page.data["Bundles"]));
+        const numPages = Math.ceil(firstPage.data["TotalRecordCount"] / PAGE_SIZE);
+        console.log(`will get ${numPages} pages`)
+        for (let i = 2; i <= numPages; i++) {
+            const page = await this.getProductPage(category, i, PAGE_SIZE);
+            results.push(...this.parseBundles(category, page.data["Bundles"]));
 
-                await new Promise(_ => setTimeout(_, 1000));
-            }
+            await new Promise(_ => setTimeout(_, 1000));
         }
         console.log("downloaded all");
 
