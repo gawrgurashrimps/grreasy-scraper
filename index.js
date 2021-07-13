@@ -1,28 +1,22 @@
 const {WoolworthsScraper} = require("./scrapers/woolworths");
 
-const wwScraper = new WoolworthsScraper();
 
-function fetchAll(onDone) {
-    let allProducts = [];
-    wwScraper.fetch().then((results) => {
-        allProducts.push(...results);
-        if (results.length === 0) {
-            onDone(allProducts);
-        } else {
-            fetchAll((prods) => {
-                allProducts.push(...results);
-                onDone(allProducts);
-            });
+(async () => {
+    const wwScraper = new WoolworthsScraper();
+
+    async function fetchAll() {
+        let results;
+        while ((results = await wwScraper.fetch()).length != 0) {
+            saveProducts(results);
         }
-    });
-}
+    }
 
-function saveProducts(products) {
-    console.log("ALL PRODUCTS RETRIEVED!");
-    // TODO: database stuff
-    console.log(products);
-}
+    function saveProducts(products) {
+        // TODO: database stuff
+        console.log(products);
+    }
 
-wwScraper.init().then(() => {
-    fetchAll(saveProducts);
-});
+    await wwScraper.init();
+    await fetchAll();
+    console.log("Everything fetched");
+})();
