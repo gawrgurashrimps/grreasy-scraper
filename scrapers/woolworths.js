@@ -1,4 +1,5 @@
 const { BaseScraper } = require("./base");
+const { Product } = require("../types/product.js");
 console.log(BaseScraper);
 const axios = require("axios");
 
@@ -53,7 +54,88 @@ class WoolworthsScraper extends BaseScraper {
             }
         );
         console.log("downloaded");
-        console.log(rawProducts.data);
+        return this.parseBundles(category, rawProducts.data["Bundles"]);
+    }
+
+    parseBundles(category, bundles) {
+        const REGEX_EACH_UNIT = /each/i;
+        const REGEX_PER_UNIT = /per (.*)/i;
+        const REGEX_QTY_UNIT = /(\d+) ?(.*)/;
+        let results = [];
+        for (const bundle of bundles) {
+            for (const product of bundle["Products"]) {
+                if (product["Price"] === null) continue; // product unavailable
+
+                let qty, unit;
+                const qtyUnitPackage = product["PackageSize"].match(REGEX_QTY_UNIT);
+                if (qtyUnitPackage !== null) {
+                    qty = parseInt(qtyUnitPackage[1]);
+                    unit = qtyUnitPackage[2];
+                } else {
+                    const perUnitPackage = product["PackageSize"].match(REGEX_PER_UNIT);
+                    if (perUnitPackage !== null) {
+                        qty = 0; // TODO fix hack for "per unit" quantity?
+                        unit = perUnitPackage[1];
+                    } else {
+                        const eachPackage = product["PackageSize"].match(REGEX_EACH_UNIT);
+                        if (eachPackage !== null) {
+                            qty = 1;
+                            unit = "each";
+                        } else {
+                            throw new Error("Unknown package size " + product["PackageSize"]);
+                        }
+                    }
+                }
+
+                const normalisedQtyUnit = this.normaliseUnit(qty, unit);
+                qty = normalisedQtyUnit["qty"];
+                unit = normalisedQtyUnit["unit"];
+
+                results.push(new Product(
+                    product["DisplayName"],
+                    "Woolworths",
+                    product["Price"],
+                    qty,
+                    unit,
+                    this.normaliseCategory(category["urlFriendlyName"])
+                ));
+            }
+        }
+
+        console.log(results);
+        return results;
+    }
+
+    normaliseUnit(qty, unit) {
+        unit = unit.toLowerCase();
+        const REGEX_TO_REMOVE = /\s|punnet/g;
+        unit = unit.replaceAll(REGEX_TO_REMOVE, "");
+        switch (unit) {
+            case "g":
+            case "ml":
+            case "each":
+                return {
+                    qty: qty,
+                    unit: unit
+                }
+            case "kg":
+                return {
+                    qty: 1000*qty,
+                    unit: "g"
+                }
+            case "l":
+                return {
+                    qty: 1000*qty,
+                    unit: "ml"
+                }
+            default:
+                throw new Error("Unknown unit: " + unit);
+        }
+    }
+
+    normaliseCategory(category) {
+        // TODO: actually categorise
+        return "other";
     }
 }
 
