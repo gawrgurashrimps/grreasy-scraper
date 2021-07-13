@@ -121,7 +121,7 @@ class WoolworthsScraper extends BaseScraper {
                 unit = normalisedQtyUnit["unit"];
 
                 results.push(new Product(
-                    product["DisplayName"],
+                    product["DisplayName"] || product["Name"],
                     "Woolworths",
                     product["Price"],
                     qty,
