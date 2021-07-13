@@ -20,6 +20,7 @@ class WoolworthsScraper extends BaseScraper {
                 urlFriendlyName: categoryObject["UrlFriendlyName"],
             };
         }
+        delete this.categories["1_B63CF9E"]; // HACK to ignore cigarettes (needs auth)
         this.categoriesKeys = Object.keys(this.categories);
         this.currentCategoryIndex = 0;
     }
