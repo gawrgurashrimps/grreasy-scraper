@@ -1,6 +1,5 @@
 const { BaseScraper } = require("./base");
 const { Product } = require("../types/product.js");
-console.log(BaseScraper);
 const axios = require("axios");
 
 const BASE_URL = "https://www.woolworths.com.au";
@@ -21,7 +20,6 @@ class WoolworthsScraper extends BaseScraper {
                 urlFriendlyName: categoryObject["UrlFriendlyName"],
             };
         }
-        console.log(this.categories);
         this.categoriesKeys = Object.keys(this.categories);
         this.currentCategoryIndex = 0;
     }
@@ -45,7 +43,6 @@ class WoolworthsScraper extends BaseScraper {
 
     async fetchCategory(category) {
         const PAGE_SIZE = 36;
-        console.log(`downloading category ${category}`);
         const firstPage = await this.getProductPage(category, 1, PAGE_SIZE);
         const results = [];
         if ("Bundles" in firstPage.data && firstPage.data["Bundles"] !== null) {
@@ -69,7 +66,7 @@ class WoolworthsScraper extends BaseScraper {
         const PRODUCT_PATH_BASE = "/shop/browse";
         const PRODUCTS_PATH = "/apis/ui/browse/category";
         const productPath = PRODUCT_PATH_BASE + "/" + category["urlFriendlyName"];
-        console.log(`getting products for category key ${category["key"]} page ${pageNum}`);
+        console.log(`getting products for category key ${category["description"]} page ${pageNum}`);
         return await axios.post(BASE_URL + PRODUCTS_PATH,
             {
                 categoryId: category["key"],
@@ -101,8 +98,6 @@ class WoolworthsScraper extends BaseScraper {
         for (const bundle of bundles) {
             for (const product of bundle["Products"]) {
                 if (product["Price"] === null) continue; // product unavailable
-                console.log(product);
-                console.log(product["PackageSize"]);
 
                 let qty, unit;
                 const qtyUnitPackage = product["PackageSize"].match(REGEX_QTY_UNIT);
@@ -135,7 +130,6 @@ class WoolworthsScraper extends BaseScraper {
             }
         }
 
-        console.log(results);
         return results;
     }
 
