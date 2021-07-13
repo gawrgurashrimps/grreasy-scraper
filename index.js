@@ -1,4 +1,5 @@
 const {WoolworthsScraper} = require("./scrapers/woolworths");
+const {insertProducts} = require("./db/db");
 
 
 (async () => {
@@ -12,8 +13,8 @@ const {WoolworthsScraper} = require("./scrapers/woolworths");
     }
 
     function saveProducts(products) {
-        // TODO: database stuff
         console.log(products);
+        insertProducts(products);
     }
 
     await wwScraper.init();
