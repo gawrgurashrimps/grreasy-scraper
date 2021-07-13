@@ -8,7 +8,6 @@ const connection = mysql.createConnection({
 });
 
 function insertProducts(products) {
-    connection.connect();
     for (const product of products) {
         connection.query(
             `
@@ -55,7 +54,6 @@ function insertProducts(products) {
                 if (err) throw err;
         })
     }
-    connection.end();
 }
 
 module.exports = {
