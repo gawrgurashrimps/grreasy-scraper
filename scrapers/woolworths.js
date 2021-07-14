@@ -120,13 +120,15 @@ class WoolworthsScraper extends BaseScraper {
                 qty = normalisedQtyUnit["qty"];
                 unit = normalisedQtyUnit["unit"];
 
+                const categoryName = this.normaliseCategory(category["urlFriendlyName"])
+
                 results.push(new Product(
                     product["DisplayName"] || product["Name"],
                     "Woolworths",
                     product["Price"],
                     qty,
                     unit,
-                    this.normaliseCategory(category["urlFriendlyName"])
+                    categoryName,
                 ));
             }
         }
@@ -163,8 +165,34 @@ class WoolworthsScraper extends BaseScraper {
     }
 
     normaliseCategory(category) {
-        // TODO: actually categorise
-        return "other";
+        switch (category) {
+            case "fruit-veg":
+            case "meat-seagood-deli":
+            case "bakery":
+            case "dairy-eggs-fridge":
+            case "pantry":
+            case "freezer":
+                return "foods";
+
+            case "drinks":
+            case "liquor":
+                return "drinks";
+
+            case "pet":
+                return "pets";
+
+            case "baby":
+                return "baby";
+
+            case "health-beauty":
+                return "health";
+
+            case "household":
+                return "houseware";
+
+            default:
+                return "other";
+        }
     }
 }
 

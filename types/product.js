@@ -2,8 +2,8 @@ class Product {
     constructor(name, origin, price, qty, unit, category) {
         const ALLOWABLE_UNITS = ["g", "ml", "each"];
 
-        if (name == null || origin == null || price == null || qty == null || unit == null) {
-            throw new Error("Product attributes (other than category) cannot be null/undefined");
+        if (name == null || origin == null || price == null || qty == null || unit == null || category == null) {
+            throw new Error("Product attributes cannot be null/undefined");
         }
 
         if (price < 0) {
