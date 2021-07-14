@@ -20,4 +20,6 @@ const {insertProducts} = require("./db/db");
     await wwScraper.init();
     await fetchAll();
     console.log("Everything fetched");
+    await new Promise(_ => setTimeout(_, 10000)); // HACK to finish off db stuff
+    process.exit(0);
 })();
