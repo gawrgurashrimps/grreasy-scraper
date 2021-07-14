@@ -27,50 +27,54 @@ function query(sql, args) {
 }
 
 function insertProducts(products) {
-    for (const product of products) {
-        query(
-            `
-            INSERT INTO items
+    const sqlPrefix =
+        `
+        INSERT INTO items
+            (
+                name,
+                origin_id,
+                price,
+                quantity,
+                fk_unit,
+                fk_category
+            )
+            VALUES
+        `;
+    const sqlRow =
+        `
+
+            (
+                ?,
                 (
-                    name,
-                    origin_id,
-                    price,
-                    quantity,
-                    fk_unit,
-                    fk_category
+                    SELECT id
+                    FROM origin
+                    WHERE name = ?
+                ),
+                ?,
+                ?,
+                (
+                    SELECT id
+                    FROM unit
+                    WHERE name = ?
+                ),
+                (
+                    SELECT id
+                    FROM category
+                    WHERE name = ?
                 )
-                VALUES
-                (
-                    ?,
-                    (
-                        SELECT id
-                        FROM origin
-                        WHERE name = ?
-                    ),
-                    ?,
-                    ?,
-                    (
-                        SELECT id
-                        FROM unit
-                        WHERE name = ?
-                    ),
-                    (
-                        SELECT id
-                        FROM category
-                        WHERE name = ?
-                    )
-                );
-            `,
-            [
-                product.name,
-                product.origin,
-                product.price,
-                product.qty,
-                product.unit,
-                product.category,
-            ]
-        )
-    }
+            )
+        `;
+    const sqlAllRows = Array(products.length).fill(sqlRow).join(",") + ";"
+    const sqlAllAttributes = products.map(product => [
+        product.name,
+        product.origin,
+        product.price,
+        product.qty,
+        product.unit,
+        product.category,
+    ]).flat();
+
+    query(sqlPrefix + sqlAllRows, sqlAllAttributes);
 }
 
 module.exports = {
