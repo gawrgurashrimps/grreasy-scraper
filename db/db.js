@@ -1,8 +1,8 @@
 const mysql = require('mysql');
 
-const connection = mysql.createConnection({
+const connection = mysql.createPool({
     host: 'localhost',
-    user: 'root',
+    user: 'root'
     password: 'root',
     database: 'products',
 });
@@ -54,6 +54,7 @@ function insertProducts(products) {
                 if (err) throw err;
         })
     }
+    connection.release();
 }
 
 module.exports = {
